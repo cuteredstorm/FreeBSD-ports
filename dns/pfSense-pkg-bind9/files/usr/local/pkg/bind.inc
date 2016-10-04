@@ -517,7 +517,7 @@ EOD;
 							$hostname = (preg_match("/(MX|NS)/", $zone['row'][$y]['hosttype']) ? "@" : $zone['row'][$y]['hostname']);
 							$hosttype = $zone['row'][$y]['hosttype'];
 							$hostdst = $zone['row'][$y]['hostdst'];
-							if (preg_match("/[a-zA-Z]/", $hostdst) && !preg_match("/(TXT|SPF|AAAA)/", $hosttype)) {
+							if (preg_match("/[a-zA-Z]/", $hostdst) && !preg_match("/(TXT|SPF|AAAA|LOC)/", $hosttype)) {
 								$hostdst .= ".";
 							}
 							$hostvalue = $zone['row'][$y]['hostvalue'];
@@ -855,7 +855,7 @@ function bind_write_rcfile() {
 	$rc['file'] = 'named.sh';
 	// Curly braces in the following <<<EOD are PHP {$variable}, not named.conf text { value; }
 	$rc['start'] = <<<EOD
-		if [ -z "`/bin/ps auxw | /usr/bin/grep "[n]amed " | /usr/bin/awk '{print $2}'`" ]; then
+		if [ -z "`/bin/ps auxw | /usr/bin/grep "[n]amed {$ip_version} -c /etc/namedb/named.conf" | /usr/bin/awk '{print $2}'`" ]; then
 			{$BIND_LOCALBASE}/sbin/named {$ip_version} -c /etc/namedb/named.conf -u bind -t /cf/named/
 		fi
 EOD;
@@ -865,11 +865,11 @@ EOD;
 EOD;
 	// curly braces in the following <<<EOD are PHP {$variable}, not named.conf text { value; }
 	$rc['restart'] = <<<EOD
-		if [ -z "`/bin/ps auxw | /usr/bin/grep "[n]amed " | /usr/bin/awk '{print $2}'`" ]; then
+		if [ -z "`/bin/ps auxw | /usr/bin/grep "[n]amed {$ip_version} -c /etc/namedb/named.conf" | /usr/bin/awk '{print $2}'`" ]; then
 			{$BIND_LOCALBASE}/sbin/named {$ip_version} -c /etc/namedb/named.conf -u bind -t /cf/named/
 		else
 			/usr/bin/killall -9 named 2>/dev/null
-				sleep 3
+		        sleep 3
 			{$BIND_LOCALBASE}/sbin/named {$ip_version} -c /etc/namedb/named.conf -u bind -t /cf/named/
 		fi
 EOD;
@@ -898,7 +898,7 @@ function bind_sync_on_changes()
 				break;
 			case 'auto':
 				if (is_array($config['hasync'])) {
-					$hasync = $config['hasync'][0];
+					$hasync = $config['hasync'];
 					$rs[0]['ipaddress'] = $hasync['synchronizetoip'];
 					$rs[0]['username'] = $hasync['username'];
 					$rs[0]['password'] = $hasync['password'];
