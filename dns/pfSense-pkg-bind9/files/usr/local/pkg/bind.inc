@@ -1,26 +1,34 @@
 <?php
 /*
- * bind.inc
- *
- * part of pfSense (https://www.pfsense.org)
- * Copyright (c) 2015 Rubicon Communications, LLC (Netgate)
- * Copyright (c) 2013 Juliano Oliveira
- * Copyright (c) 2013 Adriano Brancher
- * Copyright (c) 2013 Marcello Coutinho
- * All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+	bind.inc
+	part of pfSense (https://www.pfSense.org/)
+	Copyright (C) 2013 Juliano Oliveira
+	Copyright (C) 2013 Adriano Brancher
+	Copyright (C) 2013 Marcello Coutinho
+	Copyright (C) 2015 ESF, LLC
+	All rights reserved.
+
+	Redistribution and use in source and binary forms, with or without
+	modification, are permitted provided that the following conditions are met:
+
+	1. Redistributions of source code must retain the above copyright notice,
+	   this list of conditions and the following disclaimer.
+
+	2. Redistributions in binary form must reproduce the above copyright
+	   notice, this list of conditions and the following disclaimer in the
+	   documentation and/or other materials provided with the distribution.
+
+	THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
+	INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+	AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+	AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+	OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+	SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+	INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+	CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+	ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+	POSSIBILITY OF SUCH DAMAGE.
+*/
 $shortcut_section = "bind";
 require_once("globals.inc");
 require_once("config.inc");
@@ -509,7 +517,7 @@ EOD;
 							$hostname = (preg_match("/(MX|NS)/", $zone['row'][$y]['hosttype']) ? "@" : $zone['row'][$y]['hostname']);
 							$hosttype = $zone['row'][$y]['hosttype'];
 							$hostdst = $zone['row'][$y]['hostdst'];
-							if (preg_match("/[a-zA-Z]/", $hostdst) && !preg_match("/(TXT|SPF|AAAA)/", $hosttype)) {
+							if (preg_match("/[a-zA-Z]/", $hostdst) && !preg_match("/(TXT|SPF|AAAA|LOC)/", $hosttype)) {
 								$hostdst .= ".";
 							}
 							$hostvalue = $zone['row'][$y]['hostvalue'];
@@ -847,7 +855,7 @@ function bind_write_rcfile() {
 	$rc['file'] = 'named.sh';
 	// Curly braces in the following <<<EOD are PHP {$variable}, not named.conf text { value; }
 	$rc['start'] = <<<EOD
-		if [ -z "`/bin/ps auxw | /usr/bin/grep "[n]amed " | /usr/bin/awk '{print $2}'`" ]; then
+		if [ -z "`/bin/ps auxw | /usr/bin/grep "[n]amed {$ip_version} -c /etc/namedb/named.conf" | /usr/bin/awk '{print $2}'`" ]; then
 			{$BIND_LOCALBASE}/sbin/named {$ip_version} -c /etc/namedb/named.conf -u bind -t /cf/named/
 		fi
 EOD;
@@ -857,11 +865,11 @@ EOD;
 EOD;
 	// curly braces in the following <<<EOD are PHP {$variable}, not named.conf text { value; }
 	$rc['restart'] = <<<EOD
-		if [ -z "`/bin/ps auxw | /usr/bin/grep "[n]amed " | /usr/bin/awk '{print $2}'`" ]; then
+		if [ -z "`/bin/ps auxw | /usr/bin/grep "[n]amed {$ip_version} -c /etc/namedb/named.conf" | /usr/bin/awk '{print $2}'`" ]; then
 			{$BIND_LOCALBASE}/sbin/named {$ip_version} -c /etc/namedb/named.conf -u bind -t /cf/named/
 		else
 			/usr/bin/killall -9 named 2>/dev/null
-				sleep 3
+		        sleep 3
 			{$BIND_LOCALBASE}/sbin/named {$ip_version} -c /etc/namedb/named.conf -u bind -t /cf/named/
 		fi
 EOD;
@@ -890,7 +898,7 @@ function bind_sync_on_changes()
 				break;
 			case 'auto':
 				if (is_array($config['hasync'])) {
-					$hasync = $config['hasync'][0];
+					$hasync = $config['hasync'];
 					$rs[0]['ipaddress'] = $hasync['synchronizetoip'];
 					$rs[0]['username'] = $hasync['username'];
 					$rs[0]['password'] = $hasync['password'];
